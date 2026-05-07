@@ -1,194 +1,363 @@
 import React, { useState, useEffect } from 'react';
 
-function App() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
-  const [equipmentData, setEquipmentData] = useState([]);
-  const [loading, setLoading] = useState(true);
+const API = 'https://hamco-arabia-ecommerce.laancein.workers.dev/api/equipment';
 
+const CATEGORIES = ['All', 'Excavators', 'Cranes', 'Loaders', 'Generators', 'Compressors'];
+
+export default function App() {
+  const [screen, setScreen] = useState('splash'); // splash | login | home | detail | about | contact
+  const [activeTab, setActiveTab] = useState('home');
+  const [equipment, setEquipment] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [cat, setCat] = useState('All');
+  const [loginForm, setLoginForm] = useState({ email: '', pass: '' });
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  const [toast, setToast] = useState('');
+
+  // Splash → login/home
   useEffect(() => {
-    fetch('http://localhost:8787/api/equipment') // Hono local dev port
-      .then(res => res.json())
-      .then(data => {
-        setEquipmentData(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Fetch error:', err);
-        setLoading(false);
-      });
+    const t = setTimeout(() => setScreen(user ? 'home' : 'login'), 2000);
+    return () => clearTimeout(t);
   }, []);
 
-  const filteredEquipment = (equipmentData || []).filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  // Fetch equipment
+  useEffect(() => {
+    fetch(API)
+      .then(r => r.json())
+      .then(d => { setEquipment(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    if (!loginForm.email || !loginForm.pass) return showToast('Fill all fields');
+    setUser({ name: loginForm.email.split('@')[0], email: loginForm.email });
+    setScreen('home');
+    showToast('Welcome back!');
+  }
+
+  function navigate(tab) {
+    setActiveTab(tab);
+    setScreen(tab === 'home' ? 'home' : tab === 'detail' ? 'detail' : tab);
+    if (tab !== 'detail') setSelected(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openDetail(item) {
+    setSelected(item);
+    setScreen('detail');
+    setActiveTab('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function addToQuote(item) {
+    setCartCount(c => c + 1);
+    showToast(`${item.name} added to quote!`);
+  }
+
+  const filtered = equipment.filter(item => {
+    const matchCat = cat === 'All' || item.category?.toLowerCase() === cat.toLowerCase();
+    const matchSearch = item.name?.toLowerCase().includes(search.toLowerCase()) ||
+                        item.category?.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  // ── SPLASH ──────────────────────────────────────────────────
+  if (screen === 'splash') return (
+    <div className="splash">
+      <div className="splash-inner">
+        <img src="/assets/logo.png" alt="HAMCO" className="splash-logo" />
+        <h1 className="splash-title">HAMCO ARABIA</h1>
+        <p className="splash-sub">Industrial Excellence Since 1994</p>
+        <div className="splash-bar"><div className="splash-fill" /></div>
+      </div>
+    </div>
   );
 
+  // ── LOGIN ──────────────────────────────────────────────────
+  if (screen === 'login') return (
+    <div className="login-screen">
+      <div className="login-top">
+        <img src="/assets/logo.png" alt="HAMCO" className="login-logo" />
+        <h2 className="login-brand">HAMCO ARABIA</h2>
+        <p className="login-tagline">Your trusted equipment partner</p>
+      </div>
+      <div className="login-card">
+        <h3 className="login-heading">Sign In</h3>
+        <form onSubmit={handleLogin} className="login-form">
+          <label>Email</label>
+          <div className="input-wrap">
+            <span className="input-icon">✉</span>
+            <input type="email" placeholder="you@email.com"
+              value={loginForm.email}
+              onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <label>Password</label>
+          <div className="input-wrap">
+            <span className="input-icon">🔒</span>
+            <input type="password" placeholder="••••••••"
+              value={loginForm.pass}
+              onChange={e => setLoginForm(f => ({ ...f, pass: e.target.value }))} />
+          </div>
+          <button type="submit" className="login-btn">Sign In</button>
+        </form>
+        <button className="skip-btn" onClick={() => setScreen('home')}>
+          Browse as Guest →
+        </button>
+        <a href={`https://wa.me/966577860694?text=Hello%20HAMCO`}
+           className="wa-login-btn" target="_blank" rel="noreferrer">
+          <img src="/assets/whatsapp.png" alt="WA" style={{width:20,height:20}} />
+          Contact via WhatsApp
+        </a>
+      </div>
+    </div>
+  );
+
+  // ── DETAIL VIEW ────────────────────────────────────────────
+  if (screen === 'detail' && selected) return (
+    <div className="phone-app">
+      <header className="app-header">
+        <button className="back-btn" onClick={() => { setScreen('home'); setSelected(null); }}>←</button>
+        <span className="header-title">Equipment Detail</span>
+        <span />
+      </header>
+      <div className="detail-scroll">
+        <img src={selected.image} alt={selected.name} className="detail-img" />
+        <div className="detail-body">
+          <span className="detail-cat">{selected.category}</span>
+          <h2 className="detail-name">{selected.name}</h2>
+          <p className="detail-desc">{selected.description}</p>
+          <div className="detail-row">
+            <span className="detail-price">{selected.price}</span>
+            <span className="in-stock">● In Stock</span>
+          </div>
+          <div className="detail-actions">
+            <button className="btn-quote" onClick={() => addToQuote(selected)}>Add to Quote</button>
+            <a href={`https://wa.me/966577860694?text=Interested%20in%20${encodeURIComponent(selected.name)}`}
+               className="btn-wa" target="_blank" rel="noreferrer">
+              <img src="/assets/whatsapp.png" alt="WA" style={{width:20,height:20,marginRight:6}} />
+              WhatsApp Inquiry
+            </a>
+          </div>
+          <div className="specs-card">
+            <h4>Quick Specs</h4>
+            <div className="spec-row"><span>Category</span><span>{selected.category}</span></div>
+            <div className="spec-row"><span>Availability</span><span style={{color:'#16a34a'}}>In Stock</span></div>
+            <div className="spec-row"><span>Delivery</span><span>7–14 business days</span></div>
+            <div className="spec-row"><span>Warranty</span><span>12 months</span></div>
+          </div>
+        </div>
+      </div>
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+
+  // ── ABOUT / CONTACT SCREENS ────────────────────────────────
+  if (screen === 'about') return (
+    <div className="phone-app">
+      <header className="app-header">
+        <button className="back-btn" onClick={() => navigate('home')}>←</button>
+        <span className="header-title">About Us</span>
+        <span />
+      </header>
+      <div className="info-screen">
+        <img src="/assets/logo.png" alt="HAMCO" style={{width:100,borderRadius:20,marginBottom:'1.5rem'}} />
+        <h2 style={{color:'var(--primary)',marginBottom:'1rem'}}>HAMCO ARABIA</h2>
+        <p style={{color:'#555',textAlign:'center',lineHeight:1.7,marginBottom:'2rem'}}>
+          With over 30 years of industrial experience, we provide the most reliable
+          heavy machinery and maintenance services in the region. Our fleet is maintained
+          to the highest safety standards.
+        </p>
+        <div className="stat-row">
+          <div className="stat"><span className="stat-n">30+</span><span>Years</span></div>
+          <div className="stat"><span className="stat-n">500+</span><span>Machines</span></div>
+          <div className="stat"><span className="stat-n">50+</span><span>Countries</span></div>
+        </div>
+      </div>
+      <BottomNav active={activeTab} onNav={navigate} cartCount={cartCount} user={user} />
+    </div>
+  );
+
+  if (screen === 'contact') return (
+    <div className="phone-app">
+      <header className="app-header">
+        <button className="back-btn" onClick={() => navigate('home')}>←</button>
+        <span className="header-title">Contact</span>
+        <span />
+      </header>
+      <div className="info-screen">
+        <div className="contact-card">
+          <span className="contact-icon">📧</span>
+          <div><b>Email</b><p>info@hamco-arabia.com</p></div>
+        </div>
+        <div className="contact-card">
+          <span className="contact-icon">📞</span>
+          <div><b>Phone</b><p>+966 12 345 6789</p></div>
+        </div>
+        <div className="contact-card">
+          <span className="contact-icon">📍</span>
+          <div><b>Address</b><p>Dammam, Saudi Arabia</p></div>
+        </div>
+        <a href="https://wa.me/966577860694?text=Hello%20HAMCO%20ARABIA"
+           className="btn-wa" style={{marginTop:'1.5rem',textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}
+           target="_blank" rel="noreferrer">
+          <img src="/assets/whatsapp.png" alt="WA" style={{width:22,height:22}} />
+          Chat on WhatsApp
+        </a>
+      </div>
+      <BottomNav active={activeTab} onNav={navigate} cartCount={cartCount} user={user} />
+    </div>
+  );
+
+  // ── HOME ───────────────────────────────────────────────────
   return (
-    <div>
-      <nav className="navbar">
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <a href="/" className="logo">
-            <img src="/assets/logo.png" alt="HAMCO Logo" />
-            <span>HAMCO ARABIA</span>
-          </a>
-          <ul className="nav-links">
-            <li><a href="#home">Home</a></li>
-            <li><a href="#equipment">Equipment</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
-          </ul>
-          <button className="btn btn-primary">Login</button>
+    <div className="phone-app">
+      {/* Header */}
+      <header className="app-header">
+        <div className="header-logo">
+          <img src="/assets/logo.png" alt="HAMCO" style={{height:32,borderRadius:6}} />
+          <span className="header-brand">HAMCO ARABIA</span>
         </div>
-      </nav>
-
-      {!selectedEquipment ? (
-        <>
-          <section id="home" className="hero" style={{ backgroundImage: `url('/assets/hero.png')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <div className="hero-overlay"></div>
-            <div className="hero-content">
-              <h1>World-Class Construction Equipment</h1>
-              <p>Premium Construction Equipment for the World's Toughest Projects.</p>
-              <div className="search-container">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input 
-                  type="text" 
-                  className="search-input" 
-                  placeholder="Search by equipment type, brand, or model..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <a href="#equipment" className="btn btn-primary" style={{ marginTop: '1rem' }}>Browse Inventory</a>
-            </div>
-          </section>
-
-          <section id="equipment" className="container" style={{ marginTop: '6rem' }}>
-            <h2 className="section-title">Our Equipment Fleet</h2>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '4rem' }}>
-                <div style={{ width: '50px', height: '50px', border: '5px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
-                <p style={{ marginTop: '1rem', color: '#666' }}>Loading world-class fleet...</p>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              </div>
-            ) : (
-              <div className="equipment-grid">
-                {filteredEquipment.map(item => (
-                  <div key={item.id} className="card">
-                    <img src={item.image} alt={item.name} className="card-img" />
-                    <div className="card-body">
-                      <span style={{ color: 'var(--secondary)', fontWeight: '600', fontSize: '0.8rem', textTransform: 'uppercase' }}>{item.category}</span>
-                      <h3 className="card-title">{item.name}</h3>
-                      <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>{item.description}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="card-price">{item.price}</span>
-                        <button 
-                          className="btn btn-primary" 
-                          style={{ padding: '0.5rem 1.5rem', fontSize: '0.9rem' }}
-                          onClick={() => setSelectedEquipment(item)}
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      ) : (
-        <section className="container" style={{ marginTop: '6rem', padding: '4rem', background: 'white', borderRadius: '2rem', boxShadow: 'var(--shadow)' }}>
-          <button 
-            className="btn" 
-            style={{ marginBottom: '2rem', background: '#eee', color: '#333' }}
-            onClick={() => setSelectedEquipment(null)}
-          >
-            &larr; Back to Fleet
+        <div className="header-actions">
+          {user && <span className="user-chip">{user.name[0].toUpperCase()}</span>}
+          <button className="notif-btn" onClick={() => setScreen('login')}>
+            {user ? '👤' : '🔑'}
           </button>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem' }}>
-            <img src={selectedEquipment.image} alt={selectedEquipment.name} style={{ width: '100%', borderRadius: '1.5rem', boxShadow: 'var(--shadow)' }} />
-            <div>
-              <span style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '1rem', textTransform: 'uppercase' }}>{selectedEquipment.category}</span>
-              <h1 style={{ fontSize: '3rem', color: 'var(--primary)', margin: '1rem 0' }}>{selectedEquipment.name}</h1>
-              <p style={{ fontSize: '1.2rem', color: '#444', marginBottom: '2rem' }}>{selectedEquipment.description}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '3rem' }}>
-                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent)' }}>{selectedEquipment.price}</span>
-                <span style={{ color: '#28a745', fontWeight: '600' }}>● In Stock</span>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button className="btn btn-primary" style={{ flex: 1, padding: '1.2rem' }}>Add to Quote</button>
-                <a 
-                  href={`https://wa.me/966577860694?text=I'm%20interested%20in%20the%20${selectedEquipment.name}`} 
-                  className="btn" 
-                  style={{ flex: 1, padding: '1.2rem', background: '#25d366', color: 'white', textAlign: 'center', textDecoration: 'none' }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Inquiry via WhatsApp
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section id="about" className="container" style={{ marginTop: '8rem', textAlign: 'center' }}>
-        <div style={{ padding: '4rem', background: 'var(--primary)', color: 'white', borderRadius: '2rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>Why Choose HAMCO ARABIA?</h2>
-          <p style={{ maxWidth: '800px', margin: '0 auto', opacity: '0.9' }}>
-            With over 30 years of industrial experience, we provide the most reliable heavy machinery and maintenance services in the region. Our fleet is maintained to the highest safety standards to ensure your projects never stop.
-          </p>
+          <button className="cart-btn" onClick={() => showToast('Quote list coming soon!')}>
+            🗂 {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+          </button>
         </div>
-      </section>
+      </header>
 
-      <footer>
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-col">
-              <h3>HAMCO ARABIA</h3>
-              <p>Industrial Excellence Since 1994</p>
-            </div>
-            <div className="footer-col">
-              <h4>Quick Links</h4>
-              <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">Inventory</a></li>
-                <li><a href="#">Services</a></li>
-                <li><a href="#">Contact</a></li>
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Categories</h4>
-              <ul>
-                <li><a href="#">Excavators</a></li>
-                <li><a href="#">Cranes</a></li>
-                <li><a href="#">Loaders</a></li>
-                <li><a href="#">Generators</a></li>
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Contact Us</h4>
-              <p>Email: info@hamco-arabia.com</p>
-              <p>Phone: +966 12 345 6789</p>
-              <p>Dammam, Saudi Arabia</p>
-            </div>
-          </div>
-          <div style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', fontSize: '0.9rem', opacity: '0.7' }}>
-            &copy; 2026 HAMCO ARABIA. All rights reserved.
+      {/* Search bar */}
+      <div className="search-bar">
+        <span className="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Search equipment, brand, model..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && <button className="clear-btn" onClick={() => setSearch('')}>✕</button>}
+      </div>
+
+      <div className="scroll-content">
+        {/* Hero Banner */}
+        <div className="hero-banner" style={{backgroundImage:"url('/assets/hero.png')"}}>
+          <div className="hero-ov" />
+          <div className="hero-text">
+            <p className="hero-tag">WORLD-CLASS</p>
+            <h1 className="hero-h1">Construction<br />Equipment</h1>
+            <p className="hero-sub">Premium fleet for the toughest projects</p>
+            <a href="#equipment" className="hero-btn">Browse Inventory</a>
           </div>
         </div>
-      </footer>
-      <a 
-        href="https://wa.me/966577860694?text=Hello%20HAMCO%20ARABIA,%20I'm%20interested%20in%20your%20equipment." 
-        className="whatsapp-float" 
-        target="_blank" 
-        rel="noopener noreferrer"
-      >
-        <img src="/assets/whatsapp.png" alt="WhatsApp" />
+
+        {/* Category chips */}
+        <div className="cat-chips">
+          {CATEGORIES.map(c => (
+            <button key={c} className={`cat-chip ${cat === c ? 'cat-active' : ''}`}
+              onClick={() => setCat(c)}>{c}</button>
+          ))}
+        </div>
+
+        {/* Equipment Grid */}
+        <div className="section-head" id="equipment">
+          <h2 className="sec-title">Our Fleet</h2>
+          <span className="sec-count">{filtered.length} machines</span>
+        </div>
+
+        {loading ? (
+          <div className="loading-box">
+            <div className="spinner" />
+            <p>Loading fleet...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-box">
+            <p>No equipment found</p>
+            <button onClick={() => { setSearch(''); setCat('All'); }}>Clear filters</button>
+          </div>
+        ) : (
+          <div className="equip-grid">
+            {filtered.map(item => (
+              <div key={item.id} className="equip-card" onClick={() => openDetail(item)}>
+                <img src={item.image} alt={item.name} className="equip-img" />
+                <div className="equip-body">
+                  <span className="equip-cat">{item.category}</span>
+                  <h3 className="equip-name">{item.name}</h3>
+                  <div className="equip-footer">
+                    <span className="equip-price">{item.price}</span>
+                    <span className="equip-arrow">›</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Why HAMCO */}
+        <div className="why-section">
+          <h3>Why Choose HAMCO?</h3>
+          <div className="why-grid">
+            {[['🏆','30+ Years','Industrial experience'],
+              ['🔧','500+ Machines','Maintained fleet'],
+              ['🌍','50+ Countries','Global reach'],
+              ['📞','24/7 Support','Always available']].map(([icon,title,sub]) => (
+              <div key={title} className="why-card">
+                <span className="why-icon">{icon}</span>
+                <b>{title}</b>
+                <p>{sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{height:'90px'}} />
+      </div>
+
+      {/* WhatsApp FAB */}
+      <a href="https://wa.me/966577860694?text=Hello%20HAMCO%20ARABIA"
+         className="wa-fab" target="_blank" rel="noreferrer">
+        <img src="/assets/whatsapp.png" alt="WhatsApp" style={{width:30,height:30}} />
       </a>
+
+      {toast && <div className="toast">{toast}</div>}
+      <BottomNav active={activeTab} onNav={navigate} cartCount={cartCount} user={user} />
     </div>
   );
 }
 
-export default App;
+function BottomNav({ active, onNav, cartCount, user }) {
+  const tabs = [
+    { id: 'home',    icon: '🏠', label: 'Home' },
+    { id: 'cat',     icon: '🔧', label: 'Fleet' },
+    { id: 'contact', icon: '💬', label: 'Contact' },
+    { id: 'about',   icon: 'ℹ️', label: 'About' },
+    { id: 'account', icon: user ? '👤' : '🔑', label: user ? 'Me' : 'Login' },
+  ];
+  return (
+    <nav className="bottom-nav">
+      {tabs.map(t => (
+        <button key={t.id}
+          className={`bnav-item ${active === t.id ? 'bnav-active' : ''}`}
+          onClick={() => {
+            if (t.id === 'account') onNav('login');
+            else if (t.id === 'cat') onNav('home');
+            else onNav(t.id);
+          }}>
+          <span className="bnav-icon">{t.icon}</span>
+          <span className="bnav-label">{t.label}</span>
+          {t.id === 'cat' && cartCount > 0 && <span className="bnav-badge">{cartCount}</span>}
+        </button>
+      ))}
+    </nav>
+  );
+}
