@@ -12,6 +12,9 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [searchTerm, setSearchTerm] = useState('');
+  const [skuInput, setSkuInput] = useState('');
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth > 768) setMenuOpen(false); };
@@ -23,6 +26,21 @@ function App() {
     setMenuOpen(false);
     setCurrentPage(page);
     window.scrollTo(0, 0);
+  };
+
+  const handleVerify = () => {
+    if (!skuInput.trim()) return;
+    setVerifying(true);
+    setTimeout(() => {
+      if (skuInput.trim().toUpperCase() === 'HS-0012') {
+        setVerifyResult({ success: true, message: 'Product verified! Genuine HAMCO product.' });
+        setCurrentPage('product-check');
+        window.scrollTo(0, 0);
+      } else {
+        setVerifyResult({ success: false, message: 'SKU not found. Please check and try again.' });
+      }
+      setVerifying(false);
+    }, 800);
   };
 
   return (
