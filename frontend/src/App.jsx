@@ -12,9 +12,6 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [searchTerm, setSearchTerm] = useState('');
-  const [skuInput, setSkuInput] = useState('');
-  const [verifyResult, setVerifyResult] = useState(null);
-  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth > 768) setMenuOpen(false); };
@@ -26,21 +23,6 @@ function App() {
     setMenuOpen(false);
     setCurrentPage(page);
     window.scrollTo(0, 0);
-  };
-
-  const handleVerify = () => {
-    if (!skuInput.trim()) return;
-    setVerifying(true);
-    setTimeout(() => {
-      if (skuInput.trim().toUpperCase() === 'HS-0012') {
-        setVerifyResult({ success: true, message: 'Product verified! Genuine HAMCO product.' });
-        setCurrentPage('product-check');
-        window.scrollTo(0, 0);
-      } else {
-        setVerifyResult({ success: false, message: 'SKU not found. Please check and try again.' });
-      }
-      setVerifying(false);
-    }, 800);
   };
 
   return (
@@ -142,68 +124,7 @@ function App() {
             </div>
           </section>
 
-          {/* PRODUCT TRACEABILITY - SKU Verification on Home Page */}
-          <section className="traceability-section">
-            <div className="container">
-              <div className="traceability-card">
-                <div className="traceability-left">
-                  <h3 className="traceability-title">Product Traceability</h3>
-                  <p className="traceability-subtitle">SKU / Equipment: Certification: EN 397:2012+A1:2012</p>
-                </div>
-                <div className="traceability-right">
-                  <input
-                    type="text"
-                    className="traceability-input"
-                    placeholder="Enter Product SKU for Verification"
-                    value={skuInput}
-                    onChange={e => setSkuInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                  />
-                  <button
-                    className="traceability-btn"
-                    onClick={handleVerify}
-                    disabled={verifying}
-                  >
-                    {verifying ? 'Verifying...' : 'Verify Now'}
-                  </button>
-                </div>
-                {verifyResult && !verifyResult.success && (
-                  <div className="traceability-result error">
-                    ❌ {verifyResult.message}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
 
-          {/* MOBILE TRACEABILITY - separate layout for phone */}
-          <section className="mobile-traceability-section">
-            <div className="container">
-              <div className="mobile-trace-card">
-                <h3 className="mobile-trace-title">Product Traceability for Verification</h3>
-                <input
-                  type="text"
-                  className="mobile-trace-input"
-                  placeholder="Enter Product SKU for Verification"
-                  value={skuInput}
-                  onChange={e => setSkuInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                />
-                <button
-                  className="mobile-trace-btn"
-                  onClick={handleVerify}
-                  disabled={verifying}
-                >
-                  {verifying ? 'Verifying...' : 'Verify Now'}
-                </button>
-                {verifyResult && !verifyResult.success && (
-                  <div className="traceability-result error" style={{ marginTop: '0.5rem' }}>
-                    ❌ {verifyResult.message}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
         </main>
       )}
 
